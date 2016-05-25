@@ -10,6 +10,10 @@ NLoop = function (min, max, method, id) {
 	this.currentLoop = this;
 	this.root = this;
 	this.subscribers = {};
+	this.cycles = 0;
+	this.total = 0;
+	this.timeout = 0;
+	
 }
 
 NLoop.prototype.addEventListener = function(type, listener) {
@@ -17,6 +21,12 @@ NLoop.prototype.addEventListener = function(type, listener) {
 		this.subscribers[type] = [];
 	}
 	this.subscribers[type].push(listener);
+}
+
+NLoop.prototype.removeEventListener = function(type, listener) {
+	var arr = this.subscribers[type];
+	var index = arr.indexOf(listener);
+	arr.splice(index, 1);
 }
 
 NLoop.prototype.dispatchEvent = function(type) {
@@ -28,7 +38,6 @@ NLoop.prototype.dispatchEvent = function(type) {
 		}
 	}
 }
-
 
 
 
@@ -50,24 +59,32 @@ NLoop.prototype.up = function() {
 	if(!this.parent) {
 		this.dispatchEvent("COMPLETE");
 	}
+	
+
 }
 
 NLoop.prototype.down = function() {
 	this.root.setCurrentLoop(this.root.currentLoop.child);
 }
 
+
 NLoop.prototype.add = function(loop) {
+	
 	this.child = loop;
 	loop.parent = this;
 	loop.root = this.root;
+	this.root.updateTotal();
 }
 
 NLoop.prototype.run = function() {
-	var tempLoop = this.root.currentLoop;
-	this.root.currentLoop.step();
+	if(this.root.currentLoop) {
+		this.root.currentLoop.step();
+	}
 }
 
 NLoop.prototype.step = function() {
+	this.root.cycles++;
+	this.log("Progress " + this.root.cycles + "/" + this.root.total);
 	this.method(this.i);
 	this.i++;
 	if(this.child) {
@@ -84,6 +101,10 @@ NLoop.prototype.step = function() {
 	if(this.child) {
 		this.down();
 	}
+	
+	if(!this.complete) {
+		this.next();
+	}
 }
 
 NLoop.prototype.reset = function() {
@@ -93,27 +114,30 @@ NLoop.prototype.reset = function() {
 	}
 }
 
+NLoop.prototype.updateTotal = function() {
+	var loop = this;
+	this.total = 0;
+	do {
+		var n = loop.max - loop.min;
+		this.total = (this.total * n) + n;
+		console.log("CALCULATE " + loop.id);
+		loop = loop.child;
+	} while(loop) 
+
+}
+
 NLoop.prototype.log = function(msg) { 
 	console.log("Loop " + this.id + " - " + msg);
 }
 
-var loop1 = new NLoop(0,2, function(i, data){ console.log("A " + i); }, 1);
-var loop2 = new NLoop(0,2, function(i, data){ console.log("   B " + i); }, 2);
-var loop3 = new NLoop(0,2, function(i, data){ console.log("   	   C" + i); }, 3);
-var loop4 = new NLoop(0,6, function(i, data){ console.log("   	    	D" + i); }, 4);
-
-loop1.add(loop2);
-loop2.add(loop3);
-loop3.add(loop4);
-
-loop1.addEventListener("COMPLETE", completeHandler);
-
-function completeHandler(event) {
-	alert("COMPLETE EVENT HEARD");
-	clearInterval(interval);
+NLoop.prototype.start = function() { 
+	this.next();
 }
 
-var interval = setInterval(function() { loop1.run() }, 10);
+NLoop.prototype.next = function() { 
+	var root = this.root;
+	this.timeout = setTimeout(function() { root.run() }, 10);
+}
 
 
 
