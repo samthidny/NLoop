@@ -13,7 +13,8 @@ NLoop = function (min, max, method, id) {
 	this.cycles = 0;
 	this.total = 0;
 	this.timeout = 0;
-	
+	this.data = {};
+	this.running = false;
 }
 
 NLoop.prototype.addEventListener = function(type, listener) {
@@ -57,6 +58,7 @@ NLoop.prototype.up = function() {
 	}
 	
 	if(!this.parent) {
+		this.log("Progress " + this.root.cycles + "/" + this.root.total);
 		this.dispatchEvent("COMPLETE");
 	}
 	
@@ -84,7 +86,6 @@ NLoop.prototype.run = function() {
 
 NLoop.prototype.step = function() {
 	this.root.cycles++;
-	this.log("Progress " + this.root.cycles + "/" + this.root.total);
 	this.method(this.i);
 	this.i++;
 	if(this.child) {
@@ -116,12 +117,20 @@ NLoop.prototype.reset = function() {
 
 NLoop.prototype.updateTotal = function() {
 	var loop = this;
+	var raw = [];
+	var sum = [];
 	this.total = 0;
 	do {
 		var n = loop.max - loop.min;
-		this.total = (this.total * n) + n;
-		console.log("CALCULATE " + loop.id);
+		if(raw.length > 0) {
+			sum.push(n * sum[sum.length-1]);
+		}
+		else {
+			sum.push(n);
+		}
+		raw.push(n);
 		loop = loop.child;
+		this.total += sum[sum.length-1];
 	} while(loop) 
 
 }
@@ -131,12 +140,22 @@ NLoop.prototype.log = function(msg) {
 }
 
 NLoop.prototype.start = function() { 
+	this.running = true;
 	this.next();
 }
 
+NLoop.prototype.pause = function() { 
+	this.root.running = false;
+	clearTimeout(this.root.timeout);
+}
+
+
+
 NLoop.prototype.next = function() { 
 	var root = this.root;
-	this.timeout = setTimeout(function() { root.run() }, 10);
+	if(this.root.running) {
+		this.root.timeout = setTimeout(function() { root.run() }, 10);
+	}
 }
 
 
