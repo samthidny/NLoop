@@ -1,5 +1,5 @@
 # NLoop
-NLoop is a javascript library for running loops in an asynchronous way.
+NLoop was an experiment with running loops in an asynchronous way so progress could be visualised.
 
 It allows you to perform calculations on large amounts of data without freezing the browser.
 
